@@ -8,8 +8,12 @@ import {
 import { BoardSquare } from "./BoardSquare";
 import { LadderConnection } from "./LadderConnection";
 import { SnakeConnection } from "./SnakeConnection";
+import { LadderClimbing } from "../animations/LadderClimbing";
+import { StartingArea } from "../game/StartingArea";
 
 export const GameBoard = () => {
+  const { gameState, movementState } = useGame();
+
   // Create array of 81 squares (9x9 grid)
   const squares = Array.from({ length: 81 }, (_, i) => i + 1);
 
@@ -29,6 +33,9 @@ export const GameBoard = () => {
 
   return (
     <div className="relative aspect-square w-full max-w-3xl">
+      {/* Starting Area */}
+      <StartingArea />
+
       {/* Board squares - Base Layer */}
       <div className="grid grid-cols-9 gap-0.5 bg-gray-200 p-0.5 relative z-0">
         {reversedBoard.map((row, rowIndex) =>
@@ -42,8 +49,8 @@ export const GameBoard = () => {
         )}
       </div>
 
-      {/* Snakes Layer - Below Ladders */}
-      <div className="absolute inset-0 z-10">
+      {/* Snakes Layer */}
+      <div className="absolute inset-0 z-20">
         {SNAKE_POSITIONS.map((snake) => (
           <SnakeConnection
             key={`snake-${snake.start}-${snake.end}`}
@@ -52,8 +59,8 @@ export const GameBoard = () => {
         ))}
       </div>
 
-      {/* Ladders Layer - Above Snakes */}
-      <div className="absolute inset-0 z-20">
+      {/* Ladders Layer */}
+      <div className="absolute inset-0 z-25">
         {LADDER_POSITIONS.map((ladder) => (
           <LadderConnection
             key={`ladder-${ladder.start}-${ladder.end}`}
@@ -62,7 +69,25 @@ export const GameBoard = () => {
         ))}
       </div>
 
-      {/* Player Pieces would go here with z-30 */}
+      {/* Climbing Animation Layer */}
+      {movementState?.isClimbingLadder && (
+        <LadderClimbing
+          playerId={movementState.playerId}
+          playerColor={
+            gameState.players.find((p) => p.id === movementState.playerId)
+              ?.color || "blue"
+          }
+          playerName={
+            gameState.players.find((p) => p.id === movementState.playerId)
+              ?.name || ""
+          }
+          startPosition={movementState.currentPosition}
+          endPosition={movementState.targetPosition}
+          onComplete={() => {
+            // Animation complete callback
+          }}
+        />
+      )}
     </div>
   );
 };

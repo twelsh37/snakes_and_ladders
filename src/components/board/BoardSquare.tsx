@@ -13,6 +13,7 @@ type BoardSquareProps = {
 
 export const BoardSquare = ({ number, position }: BoardSquareProps) => {
   const { gameState } = useGame();
+
   const isSnakeHead = number in SNAKES;
   const isSnakeTail = Object.values(SNAKES).includes(number);
   const isLadderBottom = number in LADDERS;
@@ -55,37 +56,38 @@ export const BoardSquare = ({ number, position }: BoardSquareProps) => {
         </span>
       )}
 
-      <AnimatePresence mode="sync">
-        {playersHere.length > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            {playersHere.map((player, index) => (
-              <motion.div
-                key={player.id}
-                initial={{ scale: 0, y: -50 }}
-                animate={{
-                  scale: 1,
-                  y: 0,
-                  x: playersHere.length > 1 ? (index === 0 ? -12 : 12) : 0,
-                }}
-                exit={{ scale: 0, y: 50 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 500,
-                  damping: 25,
-                }}
-                className={`
-                  absolute w-12 h-12 rounded-full shadow-lg ring-1 ring-black
-                  flex items-center justify-center text-white font-bold text-lg
-                  ${player.color === "blue" ? "bg-blue-500" : "bg-red-500"}
-                `}
-                style={{ zIndex: 10 }}
-              >
-                {player.name.charAt(0)}
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Player pieces */}
+      {playersHere.length > 0 && (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ zIndex: 50 }}
+        >
+          {playersHere.map((player, index) => (
+            <motion.div
+              key={player.id}
+              initial={{ scale: 0, y: -50 }}
+              animate={{
+                scale: 1,
+                y: 0,
+                x: playersHere.length > 1 ? (index === 0 ? -12 : 12) : 0,
+              }}
+              exit={{ scale: 0, y: 50 }}
+              transition={{
+                type: "spring",
+                stiffness: 500,
+                damping: 25,
+              }}
+              className={`
+                absolute w-8 h-8 rounded-full shadow-lg ring-2 ring-black/20
+                flex items-center justify-center text-white font-bold text-lg
+                ${player.color === "blue" ? "bg-blue-500" : "bg-red-500"}
+              `}
+            >
+              {player.name.charAt(0)}
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

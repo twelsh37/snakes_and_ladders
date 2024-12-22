@@ -10,31 +10,30 @@ export const SnakeConnection = ({ snake }: SnakeConnectionProps) => {
     const index = position - 1;
     const row = Math.floor(index / BOARD_SIZE);
     const col = index % BOARD_SIZE;
-
     const adjustedCol = row % 2 === 0 ? col : BOARD_SIZE - 1 - col;
 
-    const x = (adjustedCol + 0.5) * (100 / BOARD_SIZE);
-    const y = (BOARD_SIZE - 1 - row + 0.5) * (100 / BOARD_SIZE);
-
-    return { x, y };
+    return {
+      x: (adjustedCol + 0.5) * (100 / BOARD_SIZE),
+      y: (BOARD_SIZE - 1 - row + 0.5) * (100 / BOARD_SIZE),
+    };
   };
 
-  const startPos = getSquareCenter(snake.start);
-  const endPos = getSquareCenter(snake.end);
+  const start = getSquareCenter(snake.start);
+  const end = getSquareCenter(snake.end);
 
   // Calculate midpoints for the S-curve
-  const dx = endPos.x - startPos.x;
-  const dy = endPos.y - startPos.y;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
 
   // Adjust control points for a more pronounced curve
   const controlPoint1 = {
-    x: startPos.x + dx * 0.25,
-    y: startPos.y + dy * 0.1 + 15, // Add offset for curve
+    x: start.x + dx * 0.25,
+    y: start.y + dy * 0.1 + 15, // Add offset for curve
   };
 
   const controlPoint2 = {
-    x: endPos.x - dx * 0.25,
-    y: endPos.y - dy * 0.1 - 15, // Add offset for curve
+    x: end.x - dx * 0.25,
+    y: end.y - dy * 0.1 - 15, // Add offset for curve
   };
 
   return (
@@ -47,10 +46,10 @@ export const SnakeConnection = ({ snake }: SnakeConnectionProps) => {
       {/* Snake Body */}
       <path
         d={`
-          M ${startPos.x} ${startPos.y}
+          M ${start.x} ${start.y}
           C ${controlPoint1.x} ${controlPoint1.y},
             ${controlPoint2.x} ${controlPoint2.y},
-            ${endPos.x} ${endPos.y}
+            ${end.x} ${end.y}
         `}
         stroke="#EF4444"
         strokeWidth="2"
@@ -60,8 +59,8 @@ export const SnakeConnection = ({ snake }: SnakeConnectionProps) => {
 
       {/* Snake Head */}
       <circle
-        cx={startPos.x}
-        cy={startPos.y}
+        cx={start.x}
+        cy={start.y}
         r="2"
         fill="#DC2626"
         stroke="#991B1B"
@@ -70,28 +69,12 @@ export const SnakeConnection = ({ snake }: SnakeConnectionProps) => {
 
       {/* Snake Tail */}
       <circle
-        cx={endPos.x}
-        cy={endPos.y}
+        cx={end.x}
+        cy={end.y}
         r="1.5"
         fill="#FCA5A5"
         stroke="#991B1B"
         strokeWidth="0.5"
-      />
-
-      {/* Debug points */}
-      <circle
-        cx={controlPoint1.x}
-        cy={controlPoint1.y}
-        r="0.5"
-        fill="blue"
-        opacity="0.5"
-      />
-      <circle
-        cx={controlPoint2.x}
-        cy={controlPoint2.y}
-        r="0.5"
-        fill="blue"
-        opacity="0.5"
       />
     </svg>
   );

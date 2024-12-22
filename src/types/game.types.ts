@@ -6,6 +6,7 @@ export interface Player {
   hasStarted: boolean;
   snakesHit: number;
   laddersClimbed: number;
+  isComputer?: boolean;
 }
 
 export type GameMode = "single" | "multiplayer";

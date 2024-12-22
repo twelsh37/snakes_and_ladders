@@ -29,6 +29,7 @@ type GameContextType = {
   hasSavedGame: () => boolean;
   resetGame: () => void;
   togglePause: () => void;
+  isMoving: boolean;
 };
 
 const initialGameState: GameState = {
@@ -44,6 +45,15 @@ export const GameContext = createContext<GameContextType | undefined>(
   undefined
 );
 
+// Add new types for movement
+type MovementState = {
+  playerId: string;
+  currentPosition: number;
+  targetPosition: number;
+  isMoving: boolean;
+  isClimbingLadder?: boolean;
+};
+
 export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [statistics, setStatistics] = useState<GameStatistics>(
@@ -52,6 +62,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [isRolling, setIsRolling] = useState(false);
   const [showRollSixNotification, setShowRollSixNotification] = useState(false);
+  const [movementState, setMovementState] = useState<MovementState | null>(
+    null
+  );
 
   // Update statistics when game ends
   useEffect(() => {
@@ -90,6 +103,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const startGame = (mode: GameMode, players: Player[]) => {
+    console.log("Starting game with players:", players);
     setGameState({
       ...initialGameState,
       gameMode: mode,
@@ -104,82 +118,231 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const movePlayer = (playerId: string, steps: number) => {
-    setGameState((prev) => {
-      const playerIndex = prev.players.findIndex((p) => p.id === playerId);
-      if (playerIndex === -1) return prev;
+  // Helper function to create movement steps
+  const createMovementSteps = (start: number, end: number): number[] => {
+    const steps: number[] = [];
+    if (start < end) {
+      for (let i = start + 1; i <= end; i++) steps.push(i);
+    } else {
+      for (let i = start - 1; i >= end; i--) steps.push(i);
+    }
+    return steps;
+  };
 
-      const player = prev.players[playerIndex];
-      let newPosition = Math.min(player.position + steps, TOTAL_SQUARES);
-      const oldPosition = player.position;
+  // Handle piece movement animation
+  useEffect(() => {
+    if (!movementState || !movementState.isMoving) return;
 
-      // Check for snakes and ladders
-      const finalPosition = checkSnakeOrLadder(newPosition);
+    const steps = createMovementSteps(
+      movementState.currentPosition,
+      movementState.targetPosition
+    );
 
-      // Determine if player hit a snake or climbed a ladder
-      const hitSnake = finalPosition < newPosition;
-      const climbedLadder = finalPosition > newPosition;
+    if (steps.length === 0) {
+      setMovementState(null);
+      return;
+    }
 
-      // Create updated player with new statistics
-      const updatedPlayer = {
-        ...player,
-        position: finalPosition,
-        hasStarted: true,
-        snakesHit: (player.snakesHit || 0) + (hitSnake ? 1 : 0),
-        laddersClimbed: (player.laddersClimbed || 0) + (climbedLadder ? 1 : 0),
-      };
+    const moveToNextPosition = () => {
+      const nextPosition = steps[0];
 
-      // Update all players array
-      const updatedPlayers = [...prev.players];
-      updatedPlayers[playerIndex] = updatedPlayer;
+      setGameState((prev) => {
+        const playerIndex = prev.players.findIndex(
+          (p) => p.id === movementState.playerId
+        );
+        if (playerIndex === -1) return prev;
 
-      // Update global statistics if snake or ladder was encountered
-      if (hitSnake || climbedLadder) {
-        const newStats = {
-          ...statistics,
-          snakesHit: statistics.snakesHit + (hitSnake ? 1 : 0),
-          laddersClimbed: statistics.laddersClimbed + (climbedLadder ? 1 : 0),
+        const updatedPlayers = [...prev.players];
+        updatedPlayers[playerIndex] = {
+          ...updatedPlayers[playerIndex],
+          position: nextPosition,
         };
-        setStatistics(newStats);
-        StorageService.saveStatistics(newStats);
+
+        return {
+          ...prev,
+          players: updatedPlayers,
+        };
+      });
+
+      setMovementState((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          currentPosition: nextPosition,
+          isMoving: steps.length > 1,
+        };
+      });
+
+      // Schedule next movement if there are more steps
+      if (steps.length > 1) {
+        setTimeout(() => {
+          steps.shift();
+          moveToNextPosition();
+        }, 250); // 250ms per square
+      } else {
+        // Check for ladder after movement completes
+        const finalPosition = checkSnakeOrLadder(nextPosition);
+        if (finalPosition !== nextPosition) {
+          // Start ladder animation after a brief pause
+          setTimeout(() => {
+            setMovementState({
+              playerId: movementState.playerId,
+              currentPosition: nextPosition,
+              targetPosition: finalPosition,
+              isMoving: true,
+              isClimbingLadder: nextPosition in LADDERS,
+            });
+          }, 500);
+        } else {
+          setMovementState(null);
+        }
       }
+    };
 
-      // Check for win condition
-      const isWinner = finalPosition === TOTAL_SQUARES;
+    moveToNextPosition();
+  }, [movementState?.isMoving]);
 
-      return {
-        ...prev,
-        players: updatedPlayers,
-        isGameOver: isWinner,
-        winner: isWinner ? updatedPlayer : null,
-        currentTurn: isWinner
-          ? prev.currentTurn
-          : steps === 6
-          ? prev.currentTurn
-          : (prev.currentTurn + 1) % prev.players.length,
-      };
+  const movePlayer = (playerId: string, steps: number) => {
+    console.log("Moving player:", playerId, "steps:", steps);
+    const playerIndex = gameState.players.findIndex((p) => p.id === playerId);
+    if (playerIndex === -1) return;
+
+    const player = gameState.players[playerIndex];
+    let newPosition = player.position;
+
+    // Player can start with any number
+    if (!player.hasStarted) {
+      newPosition = steps; // Start at the rolled number
+    } else {
+      // Normal movement for started players
+      newPosition = Math.min(player.position + steps, TOTAL_SQUARES);
+    }
+
+    // Check for snake or ladder at the new position immediately
+    const finalPosition = checkSnakeOrLadder(newPosition);
+    const hasSnakeOrLadder = finalPosition !== newPosition;
+
+    // First movement animation to the rolled position
+    setMovementState({
+      playerId,
+      currentPosition: player.position,
+      targetPosition: newPosition,
+      isMoving: true,
     });
+
+    // If there's a snake or ladder, schedule the second movement after a delay
+    if (hasSnakeOrLadder) {
+      setTimeout(() => {
+        setMovementState({
+          playerId,
+          currentPosition: newPosition,
+          targetPosition: finalPosition,
+          isMoving: true,
+          isClimbingLadder: newPosition in LADDERS,
+        });
+
+        setGameState((prev) => {
+          const updatedPlayers = [...prev.players];
+          updatedPlayers[playerIndex] = {
+            ...updatedPlayers[playerIndex],
+            position: finalPosition,
+            hasStarted: true,
+            snakesHit:
+              prev.players[playerIndex].snakesHit +
+              (newPosition in SNAKES ? 1 : 0),
+            laddersClimbed:
+              prev.players[playerIndex].laddersClimbed +
+              (newPosition in LADDERS ? 1 : 0),
+          };
+
+          // Check for winner
+          const isWinner = finalPosition >= TOTAL_SQUARES;
+
+          // If there's a winner, don't schedule any more turns
+          if (isWinner) {
+            return {
+              ...prev,
+              players: updatedPlayers,
+              isGameOver: true,
+              winner: updatedPlayers[playerIndex],
+              currentTurn: prev.currentTurn, // Keep current turn
+            };
+          }
+
+          return {
+            ...prev,
+            players: updatedPlayers,
+            currentTurn:
+              steps === 6
+                ? prev.currentTurn
+                : (prev.currentTurn + 1) % prev.players.length,
+          };
+        });
+      }, 1000);
+    } else {
+      setGameState((prev) => {
+        const updatedPlayers = [...prev.players];
+        updatedPlayers[playerIndex] = {
+          ...updatedPlayers[playerIndex],
+          position: newPosition,
+          hasStarted: true,
+        };
+
+        const isWinner = newPosition >= TOTAL_SQUARES;
+
+        // If there's a winner, don't schedule any more turns
+        if (isWinner) {
+          return {
+            ...prev,
+            players: updatedPlayers,
+            isGameOver: true,
+            winner: updatedPlayers[playerIndex],
+            currentTurn: prev.currentTurn, // Keep current turn
+          };
+        }
+
+        return {
+          ...prev,
+          players: updatedPlayers,
+          currentTurn:
+            steps === 6
+              ? prev.currentTurn
+              : (prev.currentTurn + 1) % prev.players.length,
+        };
+      });
+    }
   };
 
   // Computer player logic
   useEffect(() => {
     if (
       !gameState.isGameOver &&
-      gameState.players[gameState.currentTurn]?.isComputer
+      gameState.players[gameState.currentTurn]?.isComputer &&
+      !movementState?.isMoving // Don't roll while piece is moving
     ) {
       // Add a delay to make the computer's move feel more natural
       const timeoutId = setTimeout(() => {
-        rollDice();
+        handleComputerTurn();
       }, 1000);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [gameState.currentTurn, gameState.isGameOver]);
+  }, [gameState.currentTurn, gameState.isGameOver, movementState?.isMoving]);
 
-  const rollDice = async () => {
+  // New function to handle computer's turn
+  const handleComputerTurn = async () => {
+    // Don't process if game is over or computer isn't current player
+    if (
+      gameState.isGameOver ||
+      !gameState.players[gameState.currentTurn]?.isComputer
+    ) {
+      return;
+    }
+
     const roll = Math.floor(Math.random() * 6) + 1;
     const currentPlayer = gameState.players[gameState.currentTurn];
 
+    // Update dice history
     setGameState((prev) => ({
       ...prev,
       diceHistory: [
@@ -191,22 +354,74 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       ],
     }));
 
-    movePlayer(currentPlayer.id, roll);
-
-    // If it's a 6, show the notification
+    // Show roll six notification if applicable
     if (roll === 6) {
       setShowRollSixNotification(true);
       setTimeout(() => {
         setShowRollSixNotification(false);
       }, 1500);
     }
+
+    // Move the computer's piece
+    await movePlayer(currentPlayer.id, roll);
+
+    // Check if game is over before scheduling next turn
+    if (!gameState.isGameOver && roll === 6) {
+      // Wait for movement and any animations to complete
+      setTimeout(() => {
+        // Double-check game isn't over and it's still computer's turn
+        if (
+          !gameState.isGameOver &&
+          gameState.players[gameState.currentTurn]?.isComputer
+        ) {
+          handleComputerTurn();
+        }
+      }, 1500);
+    }
   };
 
+  // Update the handleRollClick function
   const handleRollClick = async () => {
-    setIsRolling(true);
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Dice roll animation
-    await rollDice();
-    setIsRolling(false);
+    // Don't allow rolling if it's computer's turn or already rolling
+    const currentPlayer = gameState.players[gameState.currentTurn];
+    if (currentPlayer?.isComputer || isRolling) return;
+
+    try {
+      // Start rolling animation
+      setIsRolling(true);
+
+      // Wait for dice animation
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Perform the roll
+      const roll = Math.floor(Math.random() * 6) + 1;
+
+      // Update game state with roll result
+      setGameState((prev) => ({
+        ...prev,
+        diceHistory: [
+          ...prev.diceHistory,
+          {
+            value: roll,
+            playerId: currentPlayer.id,
+          },
+        ],
+      }));
+
+      // Move the player
+      await movePlayer(currentPlayer.id, roll);
+
+      // Show roll six notification if applicable
+      if (roll === 6) {
+        setShowRollSixNotification(true);
+        setTimeout(() => {
+          setShowRollSixNotification(false);
+        }, 1500);
+      }
+    } finally {
+      // Ensure rolling state is reset
+      setIsRolling(false);
+    }
   };
 
   const resetGame = () => {
@@ -257,6 +472,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     hasSavedGame,
     resetGame,
     togglePause,
+    isMoving: !!movementState?.isMoving,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

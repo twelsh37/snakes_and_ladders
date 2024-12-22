@@ -1,0 +1,15 @@
+[Unit]
+Description=Snakes and Ladders Game
+After=network.target
+
+[Service]
+Type=simple
+User=your_user
+WorkingDirectory=/path/to/your/app/.next/standalone
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+Environment=PORT=3000
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target 
