@@ -42,9 +42,6 @@ module.exports = {
         ".preserve-3d": {
           "transform-style": "preserve-3d",
         },
-        ".backface-visible": {
-          "backface-visibility": "visible",
-        },
         ".perspective-500": {
           perspective: "500px",
         },

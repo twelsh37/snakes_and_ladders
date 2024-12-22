@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { BOARD_SIZE } from "../../constants/board";
 
-interface LadderClimbingProps {
+interface SnakeSlidingProps {
   playerId: string;
   playerColor: string;
   playerName: string;
@@ -10,13 +10,13 @@ interface LadderClimbingProps {
   onComplete: () => void;
 }
 
-export const LadderClimbing = ({
+export const SnakeSliding = ({
   playerColor,
   playerName,
   startPosition,
   endPosition,
   onComplete,
-}: LadderClimbingProps) => {
+}: SnakeSlidingProps) => {
   const getSquareCenter = (position: number) => {
     const index = position - 1;
     const row = Math.floor(index / BOARD_SIZE);
@@ -32,12 +32,12 @@ export const LadderClimbing = ({
   const start = getSquareCenter(startPosition);
   const end = getSquareCenter(endPosition);
 
-  // Calculate ladder length and set duration accordingly
+  // Calculate snake length and set duration accordingly
   const calculateDuration = () => {
     const distance = Math.abs(endPosition - startPosition);
-    // Short ladders (less than 15 squares): 500ms
-    // Medium ladders (15-30 squares): 750ms
-    // Long ladders (more than 30 squares): 1000ms
+    // Short snakes (less than 15 squares): 500ms
+    // Medium snakes (15-30 squares): 750ms
+    // Long snakes (more than 30 squares): 1000ms
     if (distance < 15) return 0.5;
     if (distance < 30) return 0.75;
     return 1;
@@ -49,17 +49,26 @@ export const LadderClimbing = ({
       animate={{ x: `${end.x}%`, y: `${end.y}%` }}
       transition={{
         duration: calculateDuration(),
-        ease: "easeInOut",
+        ease: "easeIn", // Faster at the end to simulate sliding down
       }}
       onAnimationComplete={onComplete}
       className="absolute z-50"
     >
-      <div
-        className={`w-8 h-8 rounded-full shadow-lg ring-2 ring-black/20 flex items-center justify-center text-white font-bold text-lg
-          ${playerColor === "blue" ? "bg-blue-500" : "bg-red-500"}`}
+      <motion.div
+        animate={{ rotate: [0, -10, 10, -10, 0] }}
+        transition={{
+          duration: 0.5,
+          repeat: Infinity,
+          ease: "linear",
+        }}
       >
-        {playerName.charAt(0)}
-      </div>
+        <div
+          className={`w-8 h-8 rounded-full shadow-lg ring-2 ring-black/20 flex items-center justify-center text-white font-bold text-lg
+            ${playerColor === "blue" ? "bg-blue-500" : "bg-red-500"}`}
+        >
+          {playerName.charAt(0)}
+        </div>
+      </motion.div>
     </motion.div>
   );
 };
