@@ -10,12 +10,12 @@ export const LadderConnection = ({ ladder }: LadderConnectionProps) => {
     const index = position - 1;
     const row = Math.floor(index / BOARD_SIZE);
     const col = index % BOARD_SIZE;
-    
+
     const adjustedCol = row % 2 === 0 ? col : BOARD_SIZE - 1 - col;
-    
+
     const x = (adjustedCol + 0.5) * (100 / BOARD_SIZE);
     const y = (BOARD_SIZE - 1 - row + 0.5) * (100 / BOARD_SIZE);
-    
+
     return { x, y };
   };
 
@@ -46,7 +46,7 @@ export const LadderConnection = ({ ladder }: LadderConnectionProps) => {
   return (
     <svg
       className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ zIndex: 10 }}
+      style={{ zIndex: 20 }}
     >
       {/* Left Strut */}
       <line

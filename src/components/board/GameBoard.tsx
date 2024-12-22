@@ -27,30 +27,10 @@ export const GameBoard = () => {
   // Reverse the entire board to start from bottom
   const reversedBoard = boardSquares.reverse();
 
-  const ladders = [
-    { start: 1, end: 22 },
-    { start: 6, end: 15 },
-    { start: 11, end: 27 },
-    { start: 19, end: 52 },
-    { start: 31, end: 52 },
-    { start: 46, end: 63 },
-    { start: 57, end: 73 },
-    { start: 67, end: 80 },
-  ];
-
-  const snakes = [
-    { start: 13, end: 8 },
-    { start: 35, end: 16 },
-    { start: 50, end: 44 },
-    { start: 55, end: 38 },
-    { start: 75, end: 70 },
-    { start: 78, end: 59 },
-  ];
-
   return (
     <div className="relative aspect-square w-full max-w-3xl">
-      {/* Board squares */}
-      <div className="grid grid-cols-9 gap-0.5 bg-gray-200 p-0.5">
+      {/* Board squares - Base Layer */}
+      <div className="grid grid-cols-9 gap-0.5 bg-gray-200 p-0.5 relative z-0">
         {reversedBoard.map((row, rowIndex) =>
           row.map((number, colIndex) => (
             <BoardSquare
@@ -62,21 +42,27 @@ export const GameBoard = () => {
         )}
       </div>
 
-      {/* Ladders Layer */}
-      {LADDER_POSITIONS.map((ladder) => (
-        <LadderConnection
-          key={`ladder-${ladder.start}-${ladder.end}`}
-          ladder={ladder}
-        />
-      ))}
+      {/* Snakes Layer - Below Ladders */}
+      <div className="absolute inset-0 z-10">
+        {SNAKE_POSITIONS.map((snake) => (
+          <SnakeConnection
+            key={`snake-${snake.start}-${snake.end}`}
+            snake={snake}
+          />
+        ))}
+      </div>
 
-      {/* Snakes Layer */}
-      {SNAKE_POSITIONS.map((snake) => (
-        <SnakeConnection
-          key={`snake-${snake.start}-${snake.end}`}
-          snake={snake}
-        />
-      ))}
+      {/* Ladders Layer - Above Snakes */}
+      <div className="absolute inset-0 z-20">
+        {LADDER_POSITIONS.map((ladder) => (
+          <LadderConnection
+            key={`ladder-${ladder.start}-${ladder.end}`}
+            ladder={ladder}
+          />
+        ))}
+      </div>
+
+      {/* Player Pieces would go here with z-30 */}
     </div>
   );
 };
