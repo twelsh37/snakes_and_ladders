@@ -1,4 +1,5 @@
 import { SnakeSliding } from "../animations/SnakeSliding";
+import { motion } from "framer-motion";
 
 {
   movementState?.isSlidingSnake && (

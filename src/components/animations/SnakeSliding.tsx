@@ -63,7 +63,7 @@ export const SnakeSliding = ({
         }}
       >
         <div
-          className={`w-8 h-8 rounded-full shadow-lg ring-2 ring-black/20 flex items-center justify-center text-white font-bold text-lg
+          className={`w-16 h-16 rounded-full shadow-lg ring-2 ring-black/20 flex items-center justify-center text-white font-bold text-2xl
             ${playerColor === "blue" ? "bg-blue-500" : "bg-red-500"}`}
         >
           {playerName.charAt(0)}
