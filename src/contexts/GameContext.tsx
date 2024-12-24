@@ -251,89 +251,115 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (!player.hasStarted) {
         newPosition = steps;
       } else {
-        newPosition = player.position + steps;
+        const targetPosition = player.position + steps;
+
+        // Handle bounce-back logic for final square
+        if (targetPosition > TOTAL_SQUARES) {
+          const excess = targetPosition - TOTAL_SQUARES;
+          newPosition = TOTAL_SQUARES - excess;
+          console.log(
+            `Bouncing back ${excess} spaces from ${TOTAL_SQUARES} to ${newPosition}`
+          );
+        } else {
+          newPosition = targetPosition;
+        }
       }
 
-      // Ensure we don't exceed board size
-      newPosition = Math.min(newPosition, TOTAL_SQUARES);
+      // Initial movement animation
+      setMovementState({
+        playerId,
+        currentPosition: player.position,
+        targetPosition: Math.min(newPosition, TOTAL_SQUARES),
+        isMoving: true,
+      });
 
-      // Check for snake or ladder
+      // If we need to bounce back, add that as a second movement
+      if (
+        newPosition < TOTAL_SQUARES &&
+        player.position + steps > TOTAL_SQUARES
+      ) {
+        setTimeout(() => {
+          setMovementState({
+            playerId,
+            currentPosition: TOTAL_SQUARES,
+            targetPosition: newPosition,
+            isMoving: true,
+          });
+        }, 1000);
+      }
+
+      // Check for snake or ladder after bounce-back
       const finalPosition = checkSnakeOrLadder(newPosition);
       const hasSnakeOrLadder = finalPosition !== newPosition;
       const isLadder = newPosition in LADDERS;
 
-      // Initial movement to the snake/ladder position
-      setMovementState({
-        playerId,
-        currentPosition: player.position,
-        targetPosition: newPosition,
-        isMoving: true,
-      });
-
-      // Handle snake/ladder movement
+      // Handle snake/ladder movement after any bounce-back
       if (hasSnakeOrLadder) {
-        setTimeout(() => {
-          if (isLadder) {
-            setMovementState({
-              playerId,
-              currentPosition: newPosition,
-              targetPosition: finalPosition,
-              isMoving: true,
-              isClimbingLadder: true,
-              ladderPath: {
-                start: newPosition,
-                end: finalPosition,
-              },
-            });
-          } else {
-            // Snake movement
-            setMovementState({
-              playerId,
-              currentPosition: newPosition,
-              targetPosition: finalPosition,
-              isMoving: true,
-              isSlidingSnake: true,
-              snakePath: {
-                start: newPosition,
-                end: finalPosition,
-              },
-            });
-          }
+        setTimeout(
+          () => {
+            if (isLadder) {
+              setMovementState({
+                playerId,
+                currentPosition: newPosition,
+                targetPosition: finalPosition,
+                isMoving: true,
+                isClimbingLadder: true,
+                ladderPath: {
+                  start: newPosition,
+                  end: finalPosition,
+                },
+              });
+            } else {
+              setMovementState({
+                playerId,
+                currentPosition: newPosition,
+                targetPosition: finalPosition,
+                isMoving: true,
+                isSlidingSnake: true,
+                snakePath: {
+                  start: newPosition,
+                  end: finalPosition,
+                },
+              });
+            }
 
-          // Update final position after animation
-          setTimeout(() => {
-            setGameState((prev) => {
-              const updatedPlayers = [...prev.players];
-              updatedPlayers[playerIndex] = {
-                ...updatedPlayers[playerIndex],
-                position: finalPosition,
-                hasStarted: true,
-                snakesHit:
-                  prev.players[playerIndex].snakesHit +
-                  (newPosition in SNAKES ? 1 : 0),
-                laddersClimbed:
-                  prev.players[playerIndex].laddersClimbed +
-                  (newPosition in LADDERS ? 1 : 0),
-              };
+            // Update final position after animation
+            setTimeout(() => {
+              setGameState((prev) => {
+                const updatedPlayers = [...prev.players];
+                updatedPlayers[playerIndex] = {
+                  ...updatedPlayers[playerIndex],
+                  position: finalPosition,
+                  hasStarted: true,
+                  snakesHit:
+                    prev.players[playerIndex].snakesHit +
+                    (newPosition in SNAKES ? 1 : 0),
+                  laddersClimbed:
+                    prev.players[playerIndex].laddersClimbed +
+                    (newPosition in LADDERS ? 1 : 0),
+                };
 
-              const isWinner = finalPosition >= TOTAL_SQUARES;
-              return {
-                ...prev,
-                players: updatedPlayers,
-                isGameOver: isWinner,
-                winner: isWinner ? updatedPlayers[playerIndex] : null,
-                currentTurn: isWinner
-                  ? prev.currentTurn
-                  : steps === 6
-                  ? prev.currentTurn
-                  : (prev.currentTurn + 1) % prev.players.length,
-              };
-            });
-            resolve();
-          }, 1000);
-        }, 1000);
+                // Only win if exactly on final square
+                const isWinner = finalPosition === TOTAL_SQUARES;
+                return {
+                  ...prev,
+                  players: updatedPlayers,
+                  isGameOver: isWinner,
+                  winner: isWinner ? updatedPlayers[playerIndex] : null,
+                  currentTurn: isWinner
+                    ? prev.currentTurn
+                    : steps === 6
+                    ? prev.currentTurn
+                    : (prev.currentTurn + 1) % prev.players.length,
+                };
+              });
+              resolve();
+            }, 1000);
+          },
+          hasSnakeOrLadder ? 2000 : 1000
+        ); // Extra delay if we had a bounce-back
       } else {
-        // Normal movement (no snake/ladder)
+        // Normal movement completion
         setTimeout(() => {
           setGameState((prev) => {
             const updatedPlayers = [...prev.players];
@@ -343,7 +369,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
               hasStarted: true,
             };
 
-            const isWinner = newPosition >= TOTAL_SQUARES;
+            // Only win if exactly on final square
+            const isWinner = newPosition === TOTAL_SQUARES;
             return {
               ...prev,
               players: updatedPlayers,
