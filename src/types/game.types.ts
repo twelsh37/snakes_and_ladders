@@ -1,3 +1,5 @@
+import type { GameLogEntry } from "../services/LoggingService";
+
 export interface Player {
   id: string;
   name: string;
@@ -17,10 +19,9 @@ export type GameState = {
   gameMode: GameMode;
   isGameOver: boolean;
   winner: Player | null;
-  diceHistory: {
-    value: number;
-    playerId: string;
-  }[];
+  lastRoll: number | null;
+  diceHistory: Array<{ value: number; playerId: string }>;
+  rollLog: GameLogEntry[];
 };
 
 export type GameStatistics = {

@@ -1,5 +1,6 @@
-import { useGame } from "../../contexts/GameContext";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useGame } from "@/contexts/GameContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export const DiceHistory = () => {
   const { gameState } = useGame();
@@ -8,27 +9,31 @@ export const DiceHistory = () => {
   return (
     <Card>
       <CardHeader className="py-3">
-        <CardTitle>Last 5 Rolls</CardTitle>
+        <CardTitle>Last 5 rolls</CardTitle>
       </CardHeader>
       <CardContent className="py-2">
-        <div className="flex gap-2 justify-start">
-          {rolls.map((roll, index) => (
-            <div
-              key={index}
-              className={`
-                w-8 h-8 flex items-center justify-center rounded-lg
-                ${
-                  gameState.players.find((p) => p.id === roll.playerId)
-                    ?.color === "blue"
-                    ? "bg-blue-100 text-blue-600"
-                    : "bg-red-100 text-red-600"
-                }
-              `}
-            >
-              {roll.value}
-            </div>
-          ))}
-        </div>
+        {rolls.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No rolls yet — roll the dice to start.</p>
+        ) : (
+          <div className="flex gap-2 justify-start flex-wrap">
+            {rolls.map((roll, index) => {
+              const player = gameState.players.find((p) => p.id === roll.playerId);
+              return (
+                <div
+                  key={`${roll.playerId}-${index}`}
+                  className={cn(
+                    "w-8 h-8 flex items-center justify-center rounded-lg font-medium",
+                    player?.color === "blue"
+                      ? "bg-player-1/20 text-player-1"
+                      : "bg-player-2/20 text-player-2"
+                  )}
+                >
+                  {roll.value}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

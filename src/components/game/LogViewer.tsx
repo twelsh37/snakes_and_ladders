@@ -1,5 +1,6 @@
 import { useGame } from "../../contexts/GameContext";
 import { format } from "date-fns";
+import type { GameLogEntry } from "../../services/LoggingService";
 
 export const LogViewer = () => {
   const { gameState } = useGame();
@@ -8,7 +9,7 @@ export const LogViewer = () => {
     <div className="bg-white p-4 rounded-lg shadow-lg max-h-96 overflow-y-auto">
       <h3 className="font-bold mb-2">Game Log</h3>
       <div className="space-y-1 text-sm">
-        {gameState.rollLog.map((log, index) => (
+        {gameState.rollLog.map((log: GameLogEntry, index: number) => (
           <div
             key={index}
             className={`py-1 ${

@@ -2,6 +2,18 @@ export const BOARD_SIZE = 9;
 export const ROWS = 9;
 export const TOTAL_SQUARES = 81;
 
+/** Board position (1–81) to percentage (0–100) for token placement. Matches board layout. */
+export function getSquareCenter(position: number): { x: number; y: number } {
+  const index = position - 1;
+  const row = Math.floor(index / BOARD_SIZE);
+  const col = index % BOARD_SIZE;
+  const adjustedCol = row % 2 === 0 ? col : BOARD_SIZE - 1 - col;
+  return {
+    x: (adjustedCol + 0.5) * (100 / BOARD_SIZE),
+    y: (BOARD_SIZE - 1 - row + 0.5) * (100 / BOARD_SIZE),
+  };
+}
+
 export const SNAKES: Record<number, number> = {
   78: 59,
   75: 70,

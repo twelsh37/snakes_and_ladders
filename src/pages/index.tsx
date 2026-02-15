@@ -1,10 +1,5 @@
-import { Game } from "../components/Game";
-import { GameProvider } from "../contexts/GameContext";
+import { Game } from "@/components/Game";
 
 export default function HomePage() {
-  return (
-    <GameProvider>
-      <Game />
-    </GameProvider>
-  );
+  return <Game />;
 }

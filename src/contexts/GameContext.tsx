@@ -8,19 +8,49 @@ import {
   useEffect,
 } from "react";
 import {
-  GameState,
+  GameState as GameStateType,
   Player,
   GameMode,
   GameStatistics,
 } from "../types/game.types";
 import { TOTAL_SQUARES, SNAKES, LADDERS } from "../constants/board";
 import { StorageService } from "../services/storage";
+import { loggingService, type GameLogEntry } from "../services/LoggingService";
+
+export interface GameLog {
+  timestamp: string;
+  isComputer: boolean;
+  playerName: string;
+  value: number;
+  position: number;
+}
+
+export interface GameState {
+  rollLog: GameLogEntry[];
+  // ... other game state properties
+}
 
 type GameContextType = {
-  gameState: GameState;
+  gameState: GameStateType;
   statistics: GameStatistics;
   isPaused: boolean;
   showRollSixNotification: boolean;
+  movementState: {
+    playerId: string;
+    currentPosition: number;
+    targetPosition: number;
+    isMoving: boolean;
+    isClimbingLadder?: boolean;
+    isSlidingSnake?: boolean;
+    ladderPath?: {
+      start: number;
+      end: number;
+    };
+    snakePath?: {
+      start: number;
+      end: number;
+    };
+  } | null;
   startGame: (mode: GameMode, players: Player[]) => void;
   rollDice: () => void;
   movePlayer: (playerId: string, steps: number) => void;
@@ -32,7 +62,7 @@ type GameContextType = {
   isMoving: boolean;
 };
 
-const initialGameState: GameState = {
+const initialGameState: GameStateType = {
   players: [],
   currentTurn: 0,
   gameMode: "single",
@@ -40,6 +70,7 @@ const initialGameState: GameState = {
   winner: null,
   lastRoll: null,
   diceHistory: [],
+  rollLog: [],
 };
 
 export const GameContext = createContext<GameContextType | undefined>(
@@ -65,7 +96,7 @@ type MovementState = {
 };
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  const [gameState, setGameState] = useState<GameState>(initialGameState);
+  const [gameState, setGameState] = useState<GameStateType>(initialGameState);
   const [statistics, setStatistics] = useState<GameStatistics>(
     StorageService.loadStatistics()
   );
@@ -145,12 +176,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!movementState || !movementState.isMoving) return;
 
-    // If climbing ladder or sliding down snake, don't use step-by-step movement
+    // If climbing ladder or sliding down snake, the animation runs once.
+    // movePlayer will clear movement state and update game state when the animation finishes.
     if (movementState.isClimbingLadder || movementState.isSlidingSnake) {
-      // Let the LadderClimbing or SnakeSliding component handle the animation
-      setTimeout(() => {
-        setMovementState(null);
-      }, 1000);
       return;
     }
 
@@ -293,71 +321,44 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const hasSnakeOrLadder = finalPosition !== newPosition;
       const isLadder = newPosition in LADDERS;
 
-      // Handle snake/ladder movement after any bounce-back
+      // Handle snake/ladder: the useEffect sets isClimbingLadder/isSlidingSnake
+      // once when step-by-step lands on the square. We only schedule the final
+      // game state update after that animation finishes (no duplicate animation).
       if (hasSnakeOrLadder) {
-        setTimeout(
-          () => {
-            if (isLadder) {
-              setMovementState({
-                playerId,
-                currentPosition: newPosition,
-                targetPosition: finalPosition,
-                isMoving: true,
-                isClimbingLadder: true,
-                ladderPath: {
-                  start: newPosition,
-                  end: finalPosition,
-                },
-              });
-            } else {
-              setMovementState({
-                playerId,
-                currentPosition: newPosition,
-                targetPosition: finalPosition,
-                isMoving: true,
-                isSlidingSnake: true,
-                snakePath: {
-                  start: newPosition,
-                  end: finalPosition,
-                },
-              });
-            }
+        // Fixed delay for: step-by-step + 500ms + 1s ladder/snake animation.
+        const totalDelay = 3000;
 
-            // Update final position after animation
-            setTimeout(() => {
-              setGameState((prev) => {
-                const updatedPlayers = [...prev.players];
-                updatedPlayers[playerIndex] = {
-                  ...updatedPlayers[playerIndex],
-                  position: finalPosition,
-                  hasStarted: true,
-                  snakesHit:
-                    prev.players[playerIndex].snakesHit +
-                    (newPosition in SNAKES ? 1 : 0),
-                  laddersClimbed:
-                    prev.players[playerIndex].laddersClimbed +
-                    (newPosition in LADDERS ? 1 : 0),
-                };
+        setTimeout(() => {
+          setMovementState(null);
+          setGameState((prev) => {
+            const updatedPlayers = [...prev.players];
+            updatedPlayers[playerIndex] = {
+              ...updatedPlayers[playerIndex],
+              position: finalPosition,
+              hasStarted: true,
+              snakesHit:
+                prev.players[playerIndex].snakesHit +
+                (newPosition in SNAKES ? 1 : 0),
+              laddersClimbed:
+                prev.players[playerIndex].laddersClimbed +
+                (newPosition in LADDERS ? 1 : 0),
+            };
 
-                // Only win if exactly on final square
-                const isWinner = finalPosition === TOTAL_SQUARES;
-                return {
-                  ...prev,
-                  players: updatedPlayers,
-                  isGameOver: isWinner,
-                  winner: isWinner ? updatedPlayers[playerIndex] : null,
-                  currentTurn: isWinner
-                    ? prev.currentTurn
-                    : steps === 6
-                    ? prev.currentTurn
-                    : (prev.currentTurn + 1) % prev.players.length,
-                };
-              });
-              resolve();
-            }, 1000);
-          },
-          hasSnakeOrLadder ? 2000 : 1000
-        ); // Extra delay if we had a bounce-back
+            const isWinner = finalPosition === TOTAL_SQUARES;
+            return {
+              ...prev,
+              players: updatedPlayers,
+              isGameOver: isWinner,
+              winner: isWinner ? updatedPlayers[playerIndex] : null,
+              currentTurn: isWinner
+                ? prev.currentTurn
+                : steps === 6
+                ? prev.currentTurn
+                : (prev.currentTurn + 1) % prev.players.length,
+            };
+          });
+          resolve();
+        }, totalDelay);
       } else {
         // Normal movement completion
         setTimeout(() => {
@@ -419,6 +420,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const roll = Math.floor(Math.random() * 6) + 1;
     const currentPlayer = gameState.players[gameState.currentTurn];
     const startPosition = currentPlayer.position;
+
+    // Add logging here
+    await handleRoll(currentPlayer, startPosition, roll);
 
     console.log(`Computer rolling ${roll} from position ${startPosition}`);
 
@@ -485,6 +489,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       await new Promise((resolve) => setTimeout(resolve, 500));
       const roll = Math.floor(Math.random() * 6) + 1;
 
+      // Add logging here
+      await handleRoll(currentPlayer, currentPlayer.position, roll);
+
       setGameState((prev) => ({
         ...prev,
         lastRoll: roll,
@@ -542,11 +549,33 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setIsPaused(!isPaused);
   };
 
+  const handleRoll = async (
+    player: Player,
+    position: number,
+    value: number
+  ) => {
+    const logEntry: GameLogEntry = {
+      timestamp: new Date(),
+      playerName: player.name,
+      isComputer: player.isComputer ?? false,
+      value,
+      position,
+    };
+
+    await loggingService.logRoll(logEntry);
+
+    setGameState((prev) => ({
+      ...prev,
+      rollLog: [...prev.rollLog, logEntry],
+    }));
+  };
+
   const value = {
     gameState,
     statistics,
     isPaused,
     showRollSixNotification,
+    movementState,
     startGame,
     rollDice: handleRollClick,
     movePlayer,

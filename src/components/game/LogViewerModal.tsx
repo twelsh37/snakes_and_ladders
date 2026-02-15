@@ -1,90 +1,75 @@
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { loggingService } from "@/services/LoggingService";
 import { useState, useEffect } from "react";
-import { Dialog } from "../ui/dialog";
-import { Button } from "../ui/button";
-import { LoggingService } from "../../services/LoggingService";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 
-export const LogViewerModal = ({
-  isOpen,
-  onClose,
-}: {
+interface LogViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
-}) => {
-  const [logFiles, setLogFiles] = useState<string[]>([]);
-  const [selectedLog, setSelectedLog] = useState<string | null>(null);
-  const [logContent, setLogContent] = useState<string>("");
+}
+
+interface LogEntry {
+  id: string;
+  timestamp: Date;
+  message: string;
+}
+
+export const LogViewerModal = ({ isOpen, onClose }: LogViewerModalProps) => {
+  const [logs, setLogs] = useState<LogEntry[]>([]);
 
   useEffect(() => {
-    const loadLogs = async () => {
-      const files = await LoggingService.getLogFiles();
-      setLogFiles(files.sort().reverse());
-    };
-
     if (isOpen) {
-      loadLogs();
+      const storedLogs = loggingService.getLogs();
+      setLogs(storedLogs);
     }
   }, [isOpen]);
 
-  const handleLogSelect = async (filename: string) => {
-    const content = await LoggingService.getLogContent(filename);
-    setSelectedLog(filename);
-    setLogContent(content);
-  };
-
-  const formatLogDate = (filename: string) => {
-    // Extract date from snl_yyyyMMddHHmmss.txt
-    const dateStr = filename.slice(4, 18);
-    const date = parseISO(
-      `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(
-        6,
-        8
-      )}T${dateStr.slice(8, 10)}:${dateStr.slice(10, 12)}:${dateStr.slice(
-        12,
-        14
-      )}`
-    );
-    return format(date, "PPpp");
+  const handleClearLogs = () => {
+    loggingService.clearLogs();
+    setLogs([]);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg w-full max-w-2xl">
-          <div className="p-6">
-            <h2 className="text-xl font-bold mb-4">Game Logs</h2>
-            <div className="flex gap-4">
-              <div className="w-1/3 border-r">
-                <h3 className="font-semibold mb-2">Log Files</h3>
-                <div className="space-y-2">
-                  {logFiles.map((file) => (
-                    <button
-                      key={file}
-                      onClick={() => handleLogSelect(file)}
-                      className={`w-full text-left px-2 py-1 rounded ${
-                        selectedLog === file
-                          ? "bg-blue-100"
-                          : "hover:bg-gray-100"
-                      }`}
-                    >
-                      {formatLogDate(file)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="w-2/3">
-                <h3 className="font-semibold mb-2">Log Content</h3>
-                <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded h-96 overflow-y-auto">
-                  {logContent || "Select a log file to view its contents"}
-                </pre>
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end">
-              <Button onClick={onClose}>Close</Button>
-            </div>
-          </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Game Logs</DialogTitle>
+        </DialogHeader>
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="destructive"
+            onClick={handleClearLogs}
+            className="text-xs"
+          >
+            Clear Logs
+          </Button>
         </div>
-      </div>
+        <ScrollArea className="h-[60vh]">
+          <div className="space-y-2 p-4">
+            {logs.map((log, index) => (
+              <div
+                key={`${log.id}-${index}`}
+                className="text-sm border-b border-border pb-2"
+              >
+                <span className="text-muted-foreground">
+                  {format(new Date(log.timestamp), "yyyy-MM-dd HH:mm:ss")}
+                </span>{" "}
+                — {log.message}
+              </div>
+            ))}
+            {logs.length === 0 && (
+              <p className="text-center text-muted-foreground py-4">No logs yet. Game events will appear here.</p>
+            )}
+          </div>
+        </ScrollArea>
+      </DialogContent>
     </Dialog>
   );
 };

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useGame } from "../../contexts/GameContext";
-import { GameMode, Player } from "../../types/game.types";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useGame } from "@/contexts/GameContext";
+import { GameMode, Player } from "@/types/game.types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const GameModeSelect = () => {
   const { startGame } = useGame();
@@ -45,38 +45,39 @@ export const GameModeSelect = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-100 to-blue-100">
-      <Card className="w-full max-w-md mx-4">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-100 to-blue-100 dark:from-gray-900 dark:to-gray-800 p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold text-center text-gray-800">
-            {selectedMode ? "Enter Player Names" : "Select Game Mode"}
+          <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-foreground">
+            {selectedMode ? "Enter player names" : "Select game mode"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {!selectedMode ? (
-            // Mode Selection
             <div className="space-y-4">
               <Button
                 onClick={() => setSelectedMode("single")}
-                className="w-full bg-blue-500 hover:bg-blue-600"
+                className="w-full"
+                variant="primary"
               >
-                Single Player
+                Single player
               </Button>
               <Button
                 onClick={() => setSelectedMode("multiplayer")}
-                className="w-full bg-green-500 hover:bg-green-600"
+                className="w-full"
+                variant="success"
               >
-                Two Players
+                Two players
               </Button>
             </div>
           ) : (
-            // Name Input
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Player 1 Name
+                <label htmlFor="player1-name" className="text-sm font-medium text-foreground">
+                  Player 1 name
                 </label>
                 <Input
+                  id="player1-name"
                   value={player1Name}
                   onChange={(e) => setPlayer1Name(e.target.value)}
                   placeholder="Enter name"
@@ -87,10 +88,11 @@ export const GameModeSelect = () => {
 
               {selectedMode === "multiplayer" && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Player 2 Name
+                  <label htmlFor="player2-name" className="text-sm font-medium text-foreground">
+                    Player 2 name
                   </label>
                   <Input
+                    id="player2-name"
                     value={player2Name}
                     onChange={(e) => setPlayer2Name(e.target.value)}
                     placeholder="Enter name"
@@ -108,11 +110,8 @@ export const GameModeSelect = () => {
                 >
                   Back
                 </Button>
-                <Button
-                  onClick={handleStartGame}
-                  className="flex-1 bg-green-500 hover:bg-green-600"
-                >
-                  Start Game
+                <Button onClick={handleStartGame} className="flex-1" variant="success">
+                  Start game
                 </Button>
               </div>
             </div>

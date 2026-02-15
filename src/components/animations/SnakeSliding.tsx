@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { BOARD_SIZE } from "../../constants/board";
+import { getSquareCenter } from "@/constants/board";
 
 interface SnakeSlidingProps {
   playerId: string;
@@ -17,58 +17,44 @@ export const SnakeSliding = ({
   endPosition,
   onComplete,
 }: SnakeSlidingProps) => {
-  const getSquareCenter = (position: number) => {
-    const index = position - 1;
-    const row = Math.floor(index / BOARD_SIZE);
-    const col = index % BOARD_SIZE;
-    const adjustedCol = row % 2 === 0 ? col : BOARD_SIZE - 1 - col;
-
-    return {
-      x: (adjustedCol + 0.5) * (100 / BOARD_SIZE),
-      y: (BOARD_SIZE - 1 - row + 0.5) * (100 / BOARD_SIZE),
-    };
-  };
-
   const start = getSquareCenter(startPosition);
   const end = getSquareCenter(endPosition);
 
-  // Calculate snake length and set duration accordingly
-  const calculateDuration = () => {
+  const duration = (() => {
     const distance = Math.abs(endPosition - startPosition);
-    // Short snakes (less than 15 squares): 500ms
-    // Medium snakes (15-30 squares): 750ms
-    // Long snakes (more than 30 squares): 1000ms
     if (distance < 15) return 0.5;
     if (distance < 30) return 0.75;
     return 1;
-  };
+  })();
 
   return (
-    <motion.div
-      initial={{ x: `${start.x}%`, y: `${start.y}%` }}
-      animate={{ x: `${end.x}%`, y: `${end.y}%` }}
-      transition={{
-        duration: calculateDuration(),
-        ease: "easeIn", // Faster at the end to simulate sliding down
-      }}
-      onAnimationComplete={onComplete}
-      className="absolute z-50"
+    <div
+      className="absolute inset-0 pointer-events-none"
+      style={{ zIndex: 100 }}
     >
       <motion.div
-        animate={{ rotate: [0, -10, 10, -10, 0] }}
-        transition={{
-          duration: 0.5,
-          repeat: Infinity,
-          ease: "linear",
+        initial={{
+          left: `${start.x}%`,
+          top: `${start.y}%`,
         }}
+        animate={{
+          left: `${end.x}%`,
+          top: `${end.y}%`,
+        }}
+        transition={{
+          duration,
+          ease: "easeIn",
+        }}
+        onAnimationComplete={onComplete}
+        className="absolute w-8 h-8 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
       >
         <div
-          className={`w-16 h-16 rounded-full shadow-lg ring-2 ring-black/20 flex items-center justify-center text-white font-bold text-2xl
-            ${playerColor === "blue" ? "bg-blue-500" : "bg-red-500"}`}
+          className={`w-8 h-8 rounded-full shadow-lg ring-2 ring-black/20 flex items-center justify-center text-player-1-foreground font-bold text-lg flex-shrink-0
+            ${playerColor === "blue" ? "bg-player-1" : "bg-player-2"}`}
         >
           {playerName.charAt(0)}
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };

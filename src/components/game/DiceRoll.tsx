@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { useGame } from "../../contexts/GameContext";
-import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useGame } from "@/contexts/GameContext";
+import { useState } from "react";
 
 interface DiceRollProps {
   isRolling: boolean;
@@ -16,7 +16,10 @@ export const DiceRoll = ({ isRolling, disabled, onRoll }: DiceRollProps) => {
   const [spinDuration, setSpinDuration] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Handle roll animation
+  const currentPlayer = gameState.players[gameState.currentTurn];
+  const isComputerTurn = currentPlayer?.isComputer ?? false;
+  const isDisabled = !gameState.isGameOver && (disabled || isAnimating);
+
   const handleRollClick = async () => {
     if (gameState.isGameOver) {
       resetGame();
@@ -27,20 +30,29 @@ export const DiceRoll = ({ isRolling, disabled, onRoll }: DiceRollProps) => {
     const duration = Math.random() * 500 + 250;
     setSpinDuration(duration);
 
-    // Wait for animation to complete before calling onRoll
     setTimeout(() => {
       setIsAnimating(false);
       onRoll();
     }, duration);
   };
 
+  const buttonLabel = gameState.isGameOver
+    ? "New Game"
+    : isComputerTurn
+    ? "Computer's turn…"
+    : "Roll Dice";
+
   return (
     <Card>
       <CardHeader className="py-3">
-        <CardTitle>Roll Dice</CardTitle>
+        <CardTitle>Dice</CardTitle>
       </CardHeader>
       <CardContent className="py-2 space-y-4">
-        <div className="h-32 flex justify-center perspective-500">
+        <div
+          className="h-32 flex flex-col items-center justify-center gap-2 perspective-500"
+          aria-live="polite"
+          aria-label={lastRoll !== null ? `Last roll: ${lastRoll}` : "No roll yet"}
+        >
           <AnimatePresence mode="wait">
             {isAnimating ? (
               <motion.div
@@ -52,7 +64,7 @@ export const DiceRoll = ({ isRolling, disabled, onRoll }: DiceRollProps) => {
                   duration: spinDuration / 1000,
                   ease: "easeOut",
                 }}
-                className="w-24 h-24 flex items-center justify-center text-4xl bg-white border-2 border-gray-200 rounded-xl shadow-lg preserve-3d"
+                className="w-24 h-24 flex items-center justify-center text-4xl bg-card border-2 border-border rounded-xl shadow-lg preserve-3d"
               >
                 ?
               </motion.div>
@@ -62,25 +74,28 @@ export const DiceRoll = ({ isRolling, disabled, onRoll }: DiceRollProps) => {
                 initial={{ rotateX: 360 * 3 }}
                 animate={{ rotateX: 0 }}
                 transition={{ duration: 0.3 }}
-                className="w-24 h-24 flex items-center justify-center text-4xl bg-white border-2 border-gray-200 rounded-xl shadow-lg preserve-3d"
+                className="w-24 h-24 flex items-center justify-center text-4xl bg-card border-2 border-border rounded-xl shadow-lg preserve-3d font-semibold"
               >
                 {lastRoll}
               </motion.div>
             ) : (
-              <div className="w-24 h-24 flex items-center justify-center text-4xl bg-white border-2 border-gray-300 border-dashed rounded-xl text-gray-400">
+              <div className="w-24 h-24 flex items-center justify-center text-4xl bg-muted border-2 border-dashed border-border rounded-xl text-muted-foreground">
                 ?
               </div>
             )}
           </AnimatePresence>
+          {isComputerTurn && isDisabled && !gameState.isGameOver && (
+            <p className="text-sm text-muted-foreground">Computer's turn…</p>
+          )}
         </div>
         <Button
           onClick={handleRollClick}
-          disabled={!gameState.isGameOver && (disabled || isAnimating)}
+          disabled={isDisabled}
           className="w-full mt-4"
-          variant={gameState.isGameOver ? "success" : "outline"}
-          size="lg"
+          variant={gameState.isGameOver ? "success" : "primary"}
+          aria-label={gameState.isGameOver ? "Start a new game" : "Roll the dice"}
         >
-          {gameState.isGameOver ? "New Game" : "Roll Dice"}
+          {buttonLabel}
         </Button>
       </CardContent>
     </Card>

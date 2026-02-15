@@ -1,5 +1,5 @@
-import { BOARD_SIZE } from "../../constants/board";
-import type { SnakePosition } from "../../constants/board";
+import { BOARD_SIZE } from "@/constants/board";
+import type { SnakePosition } from "@/constants/board";
 
 interface SnakeConnectionProps {
   snake: SnakePosition;

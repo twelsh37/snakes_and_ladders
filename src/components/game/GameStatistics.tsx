@@ -1,5 +1,6 @@
-import { useGame } from "../../contexts/GameContext";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useGame } from "@/contexts/GameContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export const GameStatistics = () => {
   const { gameState } = useGame();
@@ -7,33 +8,36 @@ export const GameStatistics = () => {
   return (
     <Card>
       <CardHeader className="py-3">
-        <CardTitle>Game Statistics</CardTitle>
+        <CardTitle>Game statistics</CardTitle>
       </CardHeader>
       <CardContent className="py-2 space-y-3">
-        {/* Player Statistics */}
         <div className="space-y-2">
           {gameState.players.map((player) => (
             <div
               key={player.id}
-              className={`p-2 rounded-md ${
-                player.color === "blue" ? "bg-blue-50" : "bg-red-50"
-              }`}
+              className={cn(
+                "p-2 rounded-md border-l-4",
+                player.color === "blue"
+                  ? "bg-muted border-player-1"
+                  : "bg-muted border-player-2"
+              )}
             >
               <div
-                className={`font-medium ${
-                  player.color === "blue" ? "text-blue-600" : "text-red-600"
-                }`}
+                className={cn(
+                  "font-medium",
+                  player.color === "blue" ? "text-player-1" : "text-player-2"
+                )}
               >
                 {player.name}
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-1 text-sm text-gray-600">
+              <div className="grid grid-cols-2 gap-2 mt-1 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
-                  <span>🪜</span>
-                  <span>{player.laddersClimbed} Climbed</span>
+                  <span aria-hidden>🪜</span>
+                  <span>{player.laddersClimbed} ladders climbed</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span>🐍</span>
-                  <span>{player.snakesHit} Hit</span>
+                  <span aria-hidden>🐍</span>
+                  <span>{player.snakesHit} snakes hit</span>
                 </div>
               </div>
             </div>

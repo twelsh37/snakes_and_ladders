@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import { LogViewerModal } from "./LogViewerModal";
-import { useGame } from "../../contexts/GameContext";
+import { useGame } from "@/contexts/GameContext";
 import { DiceRoll } from "./DiceRoll";
 import { GameStatistics } from "./GameStatistics";
 import { RollHistory } from "./RollHistory";
 
+/** Alternative sidebar layout; GameSidebar is the canonical one used in Game. */
 export const Sidebar = () => {
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
   const { gameState, rollDice, isMoving, togglePause } = useGame();
+
+  const handleLogViewerOpen = () => setIsLogViewerOpen(true);
 
   return (
     <div className="w-full max-w-sm space-y-4">
@@ -29,23 +32,29 @@ export const Sidebar = () => {
       {/* Game Statistics */}
       <GameStatistics />
 
-      {/* Game Control Buttons */}
-      <Button
-        onClick={togglePause}
-        variant="secondary"
-        className="w-full bg-gray-100"
-      >
-        Pause Game
-      </Button>
+      {/* Game Controls - Separate container */}
+      <div className="bg-white p-4 rounded-lg shadow-lg">
+        <Button
+          onClick={togglePause}
+          variant="secondary"
+          className="w-full bg-gray-100 mb-4"
+        >
+          Pause Game
+        </Button>
+      </div>
 
-      <Button
-        onClick={() => setIsLogViewerOpen(true)}
-        variant="secondary"
-        className="w-full bg-gray-100"
-      >
-        View Logs
-      </Button>
+      {/* Log Viewer Button - Separate container for visibility */}
+      <div className="bg-white p-4 rounded-lg shadow-lg">
+        <Button
+          variant="primary"
+          onClick={handleLogViewerOpen}
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium"
+        >
+          View Game Logs ({gameState.rollLog.length})
+        </Button>
+      </div>
 
+      {/* Log Viewer Modal */}
       <LogViewerModal
         isOpen={isLogViewerOpen}
         onClose={() => setIsLogViewerOpen(false)}
